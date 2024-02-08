@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices.Marshalling;
 
 class Program
@@ -13,21 +14,22 @@ class Program
         Good iPhone11 = new Good("IPhone 11");
 
         warehouse.Delive(iPhone12, 10);
-        warehouse.Delive(iPhone11, 1);
+        warehouse.Delive(iPhone11, 3);
 
         //Вывод всех товаров на складе с их остатком
         shop.ShowGoodsInWarehouse();
 
         Cart cart = shop.CreateCart();
         cart.AddGood(iPhone12, 4, warehouse);
-        cart.AddGood(iPhone11, 3, warehouse); //при такой ситуации возникает ошибка так, как нет нужного количества товара на складе
-
+        cart.AddGood(iPhone11, 2, warehouse); //при такой ситуации возникает ошибка так, как нет нужного количества товара на складе
         //Вывод всех товаров в корзине
         cart.ShowGoodsInCart();
 
         Console.WriteLine(cart.Order().Paylink);
 
-        cart.AddGood(iPhone12, 9, warehouse); //Ошибка, после заказа со склада убираются заказанные товары
+        shop.ShowGoodsInWarehouse();
+
+        //cart.AddGood(iPhone12, 9, warehouse); //Ошибка, после заказа со склада убираются заказанные товары
     }
 }
 
@@ -46,7 +48,7 @@ class Cart
             if (value >= count)
             {
                 _goods.Add(good, count);
-                Console.WriteLine($"Добавлен: {good.Name}: {count}шт.");
+                Console.WriteLine($"В крзину добавлен: {good.Name}: {count}шт.");
             }
             else
                 throw new InvalidOperationException("Превышено кол-во");
@@ -70,8 +72,8 @@ class Cart
             throw new InvalidOperationException("корзина пуста");
         }
 
-        _goods.Clear();
         Ordered?.Invoke(Goods);
+        //_goods.Clear();
         return new Order("Ordered!");
     }
 }
@@ -89,11 +91,16 @@ class Warehouse
 
     public void RemoveGoods(IReadOnlyDictionary<Good, uint> goodsInCart)
     {
-        
-
-        if (goodsInCart.ContainsKey() _goods.TryGetValue(, out uint value))
+        foreach (var good in _goods)
         {
-            value -= count;
+            if (_goods.ContainsKey(goodsInCart[good.Key]))
+            {
+                goodsInCart.TryGetValue(good, out uint valueInCart);
+
+                _goods[good] -= valueInCart;
+
+                Console.WriteLine($"Со склада удален: {good.Name}: {valueInCart}шт.");
+            }
         }
     }
 }
@@ -111,7 +118,6 @@ class Good
 class Shop
 {
     private Warehouse _warehouse;
-    private Cart _cart;
 
     public Shop(Warehouse warehouse)
     {
@@ -120,8 +126,11 @@ class Shop
 
     public Cart CreateCart()
     {
-        _cart.Ordered += OnOrdered;
-        return _cart = new Cart();
+        Cart cart = new Cart();
+
+        cart.Ordered += OnOrdered;
+
+        return cart;
     }
 
     public void ShowGoodsInWarehouse()
