@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.Marshalling;
 
 class Program
 {
@@ -14,22 +13,21 @@ class Program
         Good iPhone11 = new Good("IPhone 11");
 
         warehouse.Delive(iPhone12, 10);
-        warehouse.Delive(iPhone11, 3);
+        warehouse.Delive(iPhone11, 1);
 
-        //Вывод всех товаров на складе с их остатком
         shop.ShowGoodsInWarehouse();
 
         Cart cart = shop.CreateCart();
         cart.AddGood(iPhone12, 4, warehouse);
-        cart.AddGood(iPhone11, 2, warehouse); //при такой ситуации возникает ошибка так, как нет нужного количества товара на складе
-        //Вывод всех товаров в корзине
+        cart.AddGood(iPhone11, 3, warehouse);
+
         cart.ShowGoodsInCart();
 
         Console.WriteLine(cart.Order().Paylink);
 
         shop.ShowGoodsInWarehouse();
 
-        //cart.AddGood(iPhone12, 9, warehouse); //Ошибка, после заказа со склада убираются заказанные товары
+        cart.AddGood(iPhone12, 9, warehouse);
     }
 }
 
@@ -48,10 +46,10 @@ class Cart
             if (value >= count)
             {
                 _goods.Add(good, count);
-                Console.WriteLine($"В крзину добавлен: {good.Name}: {count}шт.");
+                Console.WriteLine($"В корзину добавлен: {good.Name}: {count}шт.");
             }
             else
-                throw new InvalidOperationException("Превышено кол-во");
+                Console.WriteLine("Нет нужного количества товара на складе");
         }
     }
 
@@ -73,8 +71,8 @@ class Cart
         }
 
         Ordered?.Invoke(Goods);
-        //_goods.Clear();
-        return new Order("Ordered!");
+        _goods.Clear();
+        return new Order("Заказ оформлен");
     }
 }
 
@@ -86,20 +84,25 @@ class Warehouse
 
     public void Delive(Good good, uint count)
     {
-        _goods.Add(good, count);
+        if (count > 0)
+            _goods.Add(good, count);
+        else
+            Console.WriteLine("Кол-во не может быть 0");
     }
 
     public void RemoveGoods(IReadOnlyDictionary<Good, uint> goodsInCart)
     {
+        Console.WriteLine("Удаление со склада");
+
         foreach (var good in _goods)
         {
-            if (_goods.ContainsKey(goodsInCart[good.Key]))
+            if (goodsInCart.ContainsKey(good.Key))
             {
-                goodsInCart.TryGetValue(good, out uint valueInCart);
+                goodsInCart.TryGetValue(good.Key, out uint valueInCart);
 
-                _goods[good] -= valueInCart;
+                _goods[good.Key] -= valueInCart;
 
-                Console.WriteLine($"Со склада удален: {good.Name}: {valueInCart}шт.");
+                Console.WriteLine($"Со склада удален: {good.Key.Name}: {valueInCart}шт.");
             }
         }
     }
@@ -109,6 +112,11 @@ class Good
 {
     public Good(string name)
     {
+        if (name.Length <= 0)
+        {
+            throw new InvalidOperationException("Нет названия товара");
+        }
+
         Name = name;
     }
 
@@ -121,7 +129,8 @@ class Shop
 
     public Shop(Warehouse warehouse)
     {
-        _warehouse = warehouse;
+        if (warehouse != null)
+            _warehouse = warehouse;
     }
 
     public Cart CreateCart()
@@ -136,8 +145,11 @@ class Shop
     public void ShowGoodsInWarehouse()
     {
         Console.WriteLine("Склад");
-        foreach (var item in _warehouse.Goods)
-            Console.WriteLine(item.Key.Name + ": " + item.Value);
+        if (_warehouse != null)
+            foreach (var item in _warehouse.Goods)
+                Console.WriteLine(item.Key.Name + ": " + item.Value);
+        else
+            Console.WriteLine("Склад пуст");
         Console.WriteLine();
     }
 
